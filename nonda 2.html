@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>飲んだ？</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: rgba(255,255,255,0.07);
+    --accent: #7cffd4;
+    --accent2: #ff6b6b;
+    --text: #e8e8f0;
+    --muted: #555570;
+    --pill-bg: rgba(124,255,212,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 80px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .logo span { color: var(--text); opacity: 0.25; }
+
+  .subtitle {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Permission banner */
+  #permBanner {
+    background: rgba(255,107,107,0.08);
+    border: 1px solid rgba(255,107,107,0.25);
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #permBanner:hover { background: rgba(255,107,107,0.15); }
+  #permBanner.hidden { display: none; }
+  .perm-icon { font-size: 1.3rem; flex-shrink: 0; }
+  .perm-text { font-size: 0.8rem; line-height: 1.5; color: #ff9a9a; }
+  .perm-text strong { display: block; color: var(--accent2); font-size: 0.85rem; }
+
+  /* Cards */
+  .schedule-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+    transition: opacity 0.3s;
+  }
+  .schedule-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    opacity: 0.35;
+    transition: opacity 0.3s, background 0.3s;
+  }
+  .schedule-card.done { opacity: 0.4; }
+  .schedule-card.done::before { background: var(--muted); }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .time-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .time-period {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-left: 5px;
+    vertical-align: super;
+  }
+
+  .status-badge {
+    font-size: 0.62rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .status-badge.active {
+    color: var(--accent);
+    border-color: rgba(124,255,212,0.3);
+    background: rgba(124,255,212,0.07);
+    animation: pulse 2s infinite;
+  }
+  .status-badge.pending {
+    color: #ffd166;
+    border-color: rgba(255,209,102,0.3);
+    background: rgba(255,209,102,0.07);
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+
+  .check-area {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .check-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: 1.1rem;
+    font-family: 'Space Mono', monospace;
+  }
+  .check-btn:hover:not(:disabled) {
+    border-color: rgba(124,255,212,0.5);
+    background: rgba(124,255,212,0.06);
+    color: var(--accent);
+  }
+  .check-btn.checked {
+    background: rgba(124,255,212,0.1);
+    border-color: rgba(124,255,212,0.45);
+    color: var(--accent);
+  }
+  .check-btn:disabled { cursor: not-allowed; opacity: 0.25; }
+
+  .check-label { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+  .check-label strong {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text);
+    font-weight: 400;
+    margin-bottom: 2px;
+  }
+
+  /* Missed */
+  .missed-section {
+    background: rgba(255,107,107,0.05);
+    border: 1px solid rgba(255,107,107,0.15);
+    border-radius: 14px;
+    padding: 16px 20px;
+  }
+  .missed-section.hidden { display: none; }
+  .missed-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 10px;
+    opacity: 0.75;
+  }
+  .missed-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .missed-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+    color: #ff9a9a;
+  }
+  .missed-item::before {
+    content: '\2014';
+    font-family: 'Space Mono', monospace;
+    color: var(--accent2);
+    opacity: 0.45;
+    font-size: 0.65rem;
+  }
+
+  /* Next */
+  .next-info {
+    background: var(--pill-bg);
+    border: 1px solid rgba(124,255,212,0.1);
+    border-radius: 12px;
+    padding: 11px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .next-label {
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .next-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.88rem;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  @keyframes flash { 0%{transform:scale(1)} 40%{transform:scale(1.3)} 100%{transform:scale(1)} }
+  .flash { animation: flash 0.28s ease; }
+
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: var(--surface);
+    border: 1px solid rgba(124,255,212,0.28);
+    border-radius: 12px;
+    padding: 11px 22px;
+    font-size: 0.82rem;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.28s ease;
+    white-space: nowrap;
+    z-index: 100;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">飲んだ？<span>_</span></div>
+  <div class="subtitle">medication reminder</div>
+</header>
+
+<div class="container">
+  <div id="permBanner" onclick="requestPerm()">
+    <div class="perm-icon">🔔</div>
+    <div class="perm-text">
+      <strong>通知を許可する</strong>
+      タップして通知をオンにしてね
+    </div>
+  </div>
+
+  <div id="cards"></div>
+
+  <div id="missedSection" class="missed-section hidden">
+    <div class="missed-title">// 未チェック</div>
+    <ul id="missedList" class="missed-list"></ul>
+  </div>
+
+  <div class="next-info">
+    <span class="next-label">next</span>
+    <span id="nextTime" class="next-time">-</span>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SCHEDULES = [
+  { id: 'morning', label: '朝',    time: { h: 7,  m: 30 } },
+  { id: 'evening', label: '夜(1)', time: { h: 20, m: 0  } },
+  { id: 'night',   label: '夜(2)', time: { h: 21, m: 0  } },
+];
+
+function dayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+// Day reset
+if (localStorage.getItem('nonda_day') !== dayKey()) {
+  const state = JSON.parse(localStorage.getItem('nonda_state') || '{}');
+  const missed = JSON.parse(localStorage.getItem('nonda_missed') || '[]');
+  const prevDay = localStorage.getItem('nonda_day') || '';
+  SCHEDULES.forEach(s => {
+    if (state[s.id] && !state[s.id].checked && prevDay) {
+      missed.push({ id: s.id, label: s.label, day: prevDay });
+    }
+  });
+  if (missed.length > 50) missed.splice(0, missed.length - 50);
+  localStorage.setItem('nonda_missed', JSON.stringify(missed));
+  const fresh = {};
+  SCHEDULES.forEach(s => { fresh[s.id] = { checked: false }; });
+  localStorage.setItem('nonda_state', JSON.stringify(fresh));
+  localStorage.setItem('nonda_day', dayKey());
+}
+
+let state = JSON.parse(localStorage.getItem('nonda_state') || '{}');
+SCHEDULES.forEach(s => { if (!state[s.id]) state[s.id] = { checked: false }; });
+
+function saveState() { localStorage.setItem('nonda_state', JSON.stringify(state)); }
+
+function fmt(h, m) {
+  const period = h < 12 ? 'AM' : 'PM';
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  return `${String(hh).padStart(2,'0')}:${String(m).padStart(2,'0')} ${period}`;
+}
+
+function nowMin() {
+  const n = new Date();
+  return n.getHours() * 60 + n.getMinutes();
+}
+
+function schedMin(s) { return s.time.h * 60 + s.time.m; }
+
+function getStatus(s) {
+  if (state[s.id].checked) return 'done';
+  const diff = nowMin() - schedMin(s);
+  if (diff >= 0 && diff < 60) return 'active';
+  if (diff >= 60) return 'pending';
+  return 'upcoming';
+}
+
+function renderCards() {
+  const container = document.getElementById('cards');
+  container.innerHTML = '';
+  SCHEDULES.forEach(s => {
+    const status = getStatus(s);
+    const checked = state[s.id].checked;
+    const canCheck = status === 'active' || status === 'pending';
+
+    const card = document.createElement('div');
+    card.className = `schedule-card${checked ? ' done' : ''}`;
+
+    let badgeClass = '', badgeText = '';
+    if (status === 'active')          { badgeClass = 'active';  badgeText = 'NOW'; }
+    else if (status === 'pending')    { badgeClass = 'pending'; badgeText = 'MISSED?'; }
+    else if (status === 'upcoming')   { badgeText = 'UPCOMING'; }
+    else if (checked)                 { badgeText = 'DONE'; }
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="time-label">${fmt(s.time.h, s.time.m)}</div>
+        <div class="status-badge ${badgeClass}">${badgeText}</div>
+      </div>
+      <div class="check-area">
+        <button class="check-btn${checked ? ' checked' : ''}"
+                id="btn-${s.id}"
+                onclick="toggleCheck('${s.id}')"
+                ${!canCheck && !checked ? 'disabled' : ''}>
+          ${checked ? '✓' : '○'}
+        </button>
+        <div class="check-label">
+          <strong>${s.label}の薬</strong>
+          ${checked ? '服薬済み ✓' : canCheck ? 'タップして記録' : '時間まで待ってね'}
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  // Missed list
+  const missed = SCHEDULES.filter(s => !state[s.id].checked && nowMin() >= schedMin(s) + 60);
+  const sec = document.getElementById('missedSection');
+  if (missed.length === 0) {
+    sec.classList.add('hidden');
+  } else {
+    sec.classList.remove('hidden');
+    document.getElementById('missedList').innerHTML = missed.map(s =>
+      `<li class="missed-item">${s.label} - ${fmt(s.time.h, s.time.m)}</li>`
+    ).join('');
+  }
+
+  // Next
+  const el = document.getElementById('nextTime');
+  const next = SCHEDULES.find(s => !state[s.id].checked && schedMin(s) > nowMin());
+  if (next) el.textContent = `${fmt(next.time.h, next.time.m)} - ${next.label}`;
+  else { el.textContent = '今日の分は完了！'; }
+}
+
+function toggleCheck(id) {
+  state[id].checked = !state[id].checked;
+  saveState();
+  const btn = document.getElementById(`btn-${id}`);
+  btn.classList.add('flash');
+  setTimeout(() => btn.classList.remove('flash'), 300);
+  showToast(state[id].checked ? '記録したよ ✓' : '取り消したよ');
+  renderCards();
+}
+
+// Notifications
+async function requestPerm() {
+  if (!('Notification' in window)) { showToast('通知非対応のブラウザです'); return; }
+  const r = await Notification.requestPermission();
+  if (r === 'granted') {
+    document.getElementById('permBanner').classList.add('hidden');
+    showToast('通知をオンにしたよ！');
+    scheduleNotifs();
+  } else {
+    showToast('通知が許可されなかったよ');
+  }
+}
+
+function scheduleNotifs() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  SCHEDULES.forEach(s => {
+    const now = Date.now();
+    const target = new Date();
+    target.setHours(s.time.h, s.time.m, 0, 0);
+    let delay = target.getTime() - now;
+    if (delay < 0) delay += 86400000;
+    setTimeout(() => {
+      if (!state[s.id].checked) {
+        new Notification('飲んだ?', { body: `${s.label}の薬、飲んだ?`, tag: s.id });
+      }
+      setTimeout(scheduleNotifs, 1000);
+    }, delay);
+  });
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function init() {
+  if ('Notification' in window) {
+    if (Notification.permission === 'granted') {
+      document.getElementById('permBanner').classList.add('hidden');
+      scheduleNotifs();
+    } else if (Notification.permission === 'denied') {
+      document.getElementById('permBanner').classList.add('hidden');
+    }
+  } else {
+    document.getElementById('permBanner').classList.add('hidden');
+  }
+  renderCards();
+  setInterval(renderCards, 30000);
+}
+
+init();
+</script>
+</body>
+</html>
